@@ -1,5 +1,11 @@
 """Shared test setup (Phase 8: every API call needs a signed-in user or the ingest API key)."""
 import os
+import sys
+from pathlib import Path
+
+# Make `import app` work however pytest is started: plain `pytest` (GitHub Actions),
+# `python -m pytest`, or inside the Docker container. The backend folder is one level up.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 # Real logins hash with 600,000 PBKDF2 iterations (~0.3 s). Tests create hundreds of apps,
 # so they use a cheap setting. The hash format stores the count, so the code path is identical.
