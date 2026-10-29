@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Data and secrets (never commit these)
+*.db
+.env
+*.log
+
+# Trained ML models: rebuilt automatically on first start
+*.joblib
+backend/models/metrics.json
+
+# Frontend
+node_modules/
+dist/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

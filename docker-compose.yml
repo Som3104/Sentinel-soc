@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: soc-db
+    environment:
+      POSTGRES_USER: soc
+      POSTGRES_PASSWORD: socpass
+      POSTGRES_DB: socdb
+    ports:
+      # 5433 on your machine -> 5432 in the container.
+      # Avoids clashing with the PostgreSQL you already installed (which uses 5432).
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soc -d socdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: soc-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://soc:socpass@db:5432/socdb
+      # Phase 8 - signs login tokens. Anyone who knows it can forge a token, so in a real
+      # deployment this comes from a secrets manager, never from a file in Git.
+      SECRET_KEY: lab-secret-change-me-7f3a9c2e
+      INGEST_API_KEY: lab-ingest-key          # the simulator sends this (SOC_INGEST_KEY)
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/code/app   # live reload: edit code, server restarts
+      - ./backend/tests:/code/tests
+      - ./simulator:/code/simulator   # tests + ML training reuse the simulator's attack generators
+      - ./backend/models:/code/models # trained ML models live here, so they survive restarts
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    image: node:22-slim
+    container_name: soc-frontend
+    working_dir: /app
+    environment:
+      VITE_API_URL: http://localhost:8000   # your browser calls the API on this address
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app          # live reload: edit a .jsx file, the page updates
+      - /app/node_modules        # keep Linux packages inside the container, not in your Windows folder
+    command: sh -c "npm install --no-audit --no-fund && npm run dev"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
